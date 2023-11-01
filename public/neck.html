@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta content="IE=edge" http-equiv="X-UA-Compatible"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <!-- <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script> -->
+    <!--    <script src="/node_modules/chart.js/dist/chart.min.js"></script>-->
+    <script src="../node_modules/chart.js/dist/chart.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css" rel="stylesheet">
+    <link href="neck.css" rel="stylesheet"/>
+    <title>Áo thể thao thông minh</title>
+</head>
+<body>
+
+
+<section class="main">
+    <div class="above-btn">
+        <div class="search">
+            <input id="" name="" placeholder="Tìm kiếm" type="text">
+        </div>
+        <div class="control-btn">
+            <button class="update_btn" id="update_btn">UPDATE</button>
+        </div>
+    </div>
+    <div id="googleMap"></div>
+    <div>
+
+        <div id="info">
+            <div class="total box ">
+                <div class="number" id="totalNum">0</div>
+                <br/>
+                <div class="text">Tất cả thiết bị</div>
+            </div>
+            <div class="box heat">
+                <canvas class="chart" height="400" id="tempChart" style="display: none;" width="400"></canvas>
+                <div id="temp">
+                    <div class="number" id="MAX30100">0 °C</div>
+                    <br/>
+                    <div class="text">Nhiệt độ </div>
+                </div>
+            </div>
+            <div class="box SPO2">
+                <canvas class="chart" height="400" id="spoChart" style="display: none;" width="400"></canvas>
+                <div id="spo">
+                    <div class="number" id="SPO2">0 %</div>
+                    <br/>
+                    <div class="text">Độ ẩm</div>
+                </div>
+            </div>
+            <div class="box C0">
+                <canvas class="chart" height="400" id="COChart" style="display: none;" width="400"></canvas>
+                <div id="co2">
+                    <div class="number" id="CO">0</div>
+                    <br/>
+                    <div class="text">Chỉ số cảm biến C0</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+</section>
+<div id="notification">
+    <h2>CẢNH BÁO NGUY HIỂM!</h2>
+    <p>Người dùng đang nhấn nút cầu cứu, xin hãy kiểm tra.</p>
+    <br>
+    <button class="btn" id="close_btn">X</button>
+    <script>
+        const close_btn = document.getElementById('close_btn');
+        const notification = document.getElementById('notification');
+        close_btn.addEventListener('click', () => {
+            notification.style.display = 'none';
+        })
+    </script>
+</div>
+<!--    <script src="socket.io.js"></script>-->
+<script src="/socket.io/socket.io.js"></script>
+<!--    socket -->
+<script>
+    const totalNum = document.getElementById("totalNum");
+    //cac chi so co ban
+    const MAX30100 = document.getElementById('MAX30100'); //nhiet do
+    const SPO2 = document.getElementById('SPO2'); //độ ẩm
+    const CO = document.getElementById('CO'); //co
+    const update_btn = document.getElementById('update_btn');
+    //chart
+    const tempChart1 = document.getElementById('temp'); //đồ thị nhiệt độ
+    const spoChart1 = document.getElementById('spo'); //đồ thị độ ẩm
+    const coChart1 = document.getElementById('CO'); //đồ thị co
+    let LAT = 0, LNG = 0;
+
+    const socket = io();
+
+    //cap nhat toan bo thong tin
+    update_btn.addEventListener('click', () => {
+        socket.emit('UPDATE', ' update')
+    })
+    //cap nhat so luong thiet bi ket noi
+    socket.on("totalDevice", (data) => {
+        totalNum.innerText = `${data}`;
+    });
+    
+    socket.on("message", (message) => {
+        console.log(message)
+        MAX30100.innerText = `${message.temp} °C`;
+        SPO2.innerText = `${message.humi} %`;
+        CO.innerText = `${message.co}`;
+        addData(tempChart, message.temp);
+        addData(spoChart, message.humi);
+        addData(COChart, message.co);
+        if (message.lat !== 0 && message.lng !== 0) {
+            LAT = message.lat;
+            LNG = message.lng;
+        }
+        if (tempChart.data.datasets[0].data.length > 30) {
+            removeData(tempChart);
+            removeData(spoChart);
+            removeData(COChart);
+        }
+        if (message.needHelp == true) {
+            notification.style.display = 'block';
+        }
+    })
+
+</script>
+<!-- google map   -->
+<script>
+    function myMap() {
+        const mapProp1 = {
+            center: new google.maps.LatLng(20.99861496637506, 105.85524747787383),
+            zoom: 15,
+        };
+        if (LNG !== 0 && LAT !== 0) {
+            mapProp1.center = new google.maps.LatLng(LAT, LNG)
+        }
+        // const mapProp2 = {
+        //     center: new google.maps.LatLng(21.99861496637506, 107.85524747787383),
+        //     zoom: 15,
+        // };
+        const map = new google.maps.Map(
+            document.getElementById("googleMap"),
+            mapProp1,
+            // mapProp2
+        );
+    }
+</script>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDmRAp1Vw0nUZIuwShewL3NHEu_MO52Wc8&callback=myMap"></script>
+<!--animation -->
+<script>
+    const Goup = [
+        {transform: 'translateY(300px)'},
+        {transform: 'translateY(00px)'}
+    ];
+    const Gouptiming = {
+        duration: 1000,
+        iterations: 1
+    }
+
+    tempChart1.addEventListener('click', () => {
+        temp1.animate(Goup, Gouptiming)
+    });
+    coChart1.addEventListener('click', () => {
+        co1.animate(Goup, Gouptiming)
+    });
+    spoChart1.addEventListener('click', () => {
+        spo1.animate(Goup, Gouptiming)
+    });
+
+
+    const temp1 = document.getElementById('tempChart');
+    tempChart1.addEventListener("click", () => {
+        if (temp1.style.display === 'none') {
+            temp1.style.display = 'block';
+            co1.style.display = 'none';
+            spo1.style.display = 'none';
+        } else {
+            temp1.style.display = 'none';
+        }
+    });
+    const co1 = document.getElementById('COChart');
+    coChart1.addEventListener("click", () => {
+        if (co1.style.display === 'none') {
+            co1.style.display = 'block';
+            temp1.style.display = 'none';
+            spo1.style.display = 'none';
+        } else {
+            co1.style.display = 'none';
+        }
+    });
+    const spo1 = document.getElementById('spoChart');
+    spoChart1.addEventListener("click", () => {
+        if (spo1.style.display === 'none') {
+            spo1.style.display = 'block';
+            temp1.style.display = 'none';
+            co1.style.display = 'none';
+        } else {
+            spo1.style.display = 'none';
+        }
+    });
+</script>
+
+<!--  chart data -->
+<script>
+
+    const temp = document.getElementById('tempChart').getContext('2d');
+    const tempChart = new Chart(temp, {
+        type: 'line',
+        data: {
+            labels: [60, 58, 56, 54, 52, 50, 48, 46, 44, 42, 40, 38, 36, 34, 32, 30, 28, 26, 24, 22, 20, 18, 16, 14, 12, 10, 8, 6, 4, 2, 0],
+            datasets: [{
+                label: 'Than nhiet (do C)',
+                data: [],
+                borderColor: 'rgb(75, 192, 192)',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: false,
+            y: {
+                suggestedMin: 20,
+                suggestedMax: 42,
+            },
+        },
+    });
+    const spo = document.getElementById('spoChart').getContext('2d');
+    const spoChart = new Chart(spo, {
+        type: 'line',
+        data: {
+            labels: [60, 58, 56, 54, 52, 50, 48, 46, 44, 42, 40, 38, 36, 34, 32, 30, 28, 26, 24, 22, 20, 18, 16, 14, 12, 10, 8, 6, 4, 2, 0],
+            datasets: [{
+                label: 'Oxy (%)',
+                data: [],
+                borderColor: 'rgb(75, 192, 192)',
+                tension: 0.1
+            }]
+        },
+       options: {
+            responsive: false,
+            y: {
+                suggestedMin: 40,
+                suggestedMax: 100,
+            },
+        },
+    });
+    const co = document.getElementById('COChart').getContext('2d');
+    const COChart = new Chart(co, {
+        type: 'line',
+        data: {
+            labels: [60, 58, 56, 54, 52, 50, 48, 46, 44, 42, 40, 38, 36, 34, 32, 30, 28, 26, 24, 22, 20, 18, 16, 14, 12, 10, 8, 6, 4, 2, 0],
+            datasets: [{
+                label: 'CO ',
+                data: [],
+                borderColor: 'rgb(75, 192, 192)',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: false,
+            y: {
+                suggestedMin: 0,
+                suggestedMax: 500,
+            },
+        }
+    });
+</script>
+<!--update chart-->
+<script>
+    function addData(chart, data) {
+        // chart.data.labels.push(label);
+        chart.data.datasets.forEach((dataset) => {
+            dataset.data.push(data);
+        });
+        chart.update();
+    }
+
+    function removeData(chart) {
+        // chart.data.labels.pop();
+        chart.data.datasets.forEach((dataset) => {
+            dataset.data.shift();
+        });
+        chart.update();
+    }
+</script>
+</body>
+</html>
